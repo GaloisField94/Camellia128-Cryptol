@@ -14,7 +14,6 @@ sigma = [
 0x10E527FADE682D1D,
 0xB05688C2B3E6C1FD]
 
-
 s1: [256]B
 s1 = [
 112, 130,  44, 236, 179,  39, 192, 229, 228, 133,  87,  53, 234,  12, 174,  65,
@@ -40,7 +39,6 @@ s1f x = (s1 @ x)
 s2f: B -> B
 s2f x = (s1 @ x) <<< 1
 
-
 s3f: B -> B
 s3f x = (s1 @ x) >>> 1
 
@@ -50,29 +48,17 @@ s4f x = s1 @ (x <<< 1)
 Sf: L -> L
 Sf x = join[s1f(split`{8}(x)@0), s2f(split`{8}(x)@1), s3f(split`{8}(x)@2), s4f(split`{8}(x)@3), s2f(split`{8}(x)@4), s3f(split`{8}(x)@5), s4f(split`{8}(x)@6), s1f(split`{8}(x)@7)]
 
-P: [8][8]B
-P = [
-[0,1,1,1,1,0,0,1],
-[1,0,1,1,1,1,0,0],
-[1,1,0,1,0,1,1,0],
-[1,1,1,0,0,0,1,1],
-[0,1,1,1,1,1,1,0],
-[1,0,1,1,0,1,1,1],
-[1,1,0,1,1,0,1,1],
-[1,1,1,0,1,1,0,1]]
-
-xorBytes: {n}(fin n) => [n]B -> B
-xorBytes x = y ! 0
-	where y = [0] # [xi ^ yi | xi <- x | yi <- y]
-
-dotProduct: {n}(fin n) => ([n]B, [n]B) -> B
-dotProduct (x, y) = xorBytes [xi*yi | xi <- x | yi <-y]
-
-vecMatMul: {n}(fin n) => ([n][n]B, [n]B) -> [n]B
-vecMatMul (x, y) = [dotProduct(xi, y) | xi <- x]
-
 Pf: L -> L
-Pf x = join(vecMatMul(P, split`{8}(x)))
+Pf x = join[a,b,c,d,e,f,g,h]
+  where a = z@0 ^ z@2 ^ z@3 ^ z@5 ^ z@6 ^ z@7
+        b = z@0 ^ z@1 ^ z@3 ^ z@4 ^ z@6 ^ z@7
+        c = z@0 ^ z@1 ^ z@2 ^ z@4 ^ z@5 ^ z@7
+        d = z@1 ^ z@2 ^ z@3 ^ z@4 ^ z@5 ^ z@6
+        e = z@0 ^ z@1 ^ z@5 ^ z@6 ^ z@7
+        f = z@1 ^ z@2 ^ z@4 ^ z@6 ^ z@7
+        g = z@2 ^ z@3 ^ z@4 ^ z@5 ^ z@7
+        h = z@0 ^ z@3 ^ z@4 ^ z@5 ^ z@6
+        z = split`{8}(x)
 
 F: (L,L) -> L
 F (x,k) = Pf(Sf(x^k))
@@ -294,5 +280,220 @@ kl256 K = k
         kl = KL256(K)
         kr = KR256(K)
         
+//full encryption/decryption
+
+cam128e: (Q,Q) -> Q
+cam128e (x,k) = y
+  where y = join[yr,yl]
+        yr = split`{2}(Round(y17,k128(k)@17))@1 ^ kw128(k)@2	 
+        yl = split`{2}(Round(y17,k128(k)@17))@0 ^ kw128(k)@3  
+        y17 = Round(y16,k128(k)@16)
+        y16 = Round(y15,k128(k)@15)
+        y15 = Round(y14,k128(k)@14)
+        y14 = Round(y13,k128(k)@13)
+        y13 = Round(y12,k128(k)@12)
+        y12 = join[y12l,y12r]
+        y12l = FL(split`{2}(Round(y11,k128(k)@11))@0,kl128(k)@2)
+        y12r = FL_1(split`{2}(Round(y11,k128(k)@11))@1,kl128(k)@3)
+        y11 = Round(y10,k128(k)@10)
+        y10 = Round(y9,k128(k)@9)
+        y9 = Round(y8,k128(k)@8)
+        y8 = Round(y7,k128(k)@7)
+        y7 = Round(y6,k128(k)@6)
+        y6 = join[y6l,y6r]  
+        y6l = FL(split`{2}(Round(y5,k128(k)@5))@0,kl128(k)@0)
+        y6r = FL_1(split`{2}(Round(y5,k128(k)@5))@1,kl128(k)@1)
+        y5 = Round(y4,k128(k)@4)
+        y4 = Round(y3,k128(k)@3)
+        y3 = Round(y2,k128(k)@2)
+        y2 = Round(y1,k128(k)@1)
+        y1 = Round(y0,k128(k)@0)
+        y0 = join[y0l,y0r]
+        y0l = split`{2}(x)@0 ^ kw128(k)@0
+        y0r = split`{2}(x)@1 ^ kw128(k)@1
+        
+cam128d: (Q,Q) -> Q
+cam128d (x,k) = y
+  where y = join[yr,yl]
+        yr = split`{2}(Round(y17,k128(k)@0))@1 ^ kw128(k)@0	 
+        yl = split`{2}(Round(y17,k128(k)@0))@0 ^ kw128(k)@1  
+        y17 = Round(y16,k128(k)@1)
+        y16 = Round(y15,k128(k)@2)
+        y15 = Round(y14,k128(k)@3)
+        y14 = Round(y13,k128(k)@4)
+        y13 = Round(y12,k128(k)@5)
+        y12 = join[y12l,y12r]
+        y12l = FL(split`{2}(Round(y11,k128(k)@6))@0,kl128(k)@1)
+        y12r = FL_1(split`{2}(Round(y11,k128(k)@6))@1,kl128(k)@0)
+        y11 = Round(y10,k128(k)@7)
+        y10 = Round(y9,k128(k)@8)
+        y9 = Round(y8,k128(k)@9)
+        y8 = Round(y7,k128(k)@10)
+        y7 = Round(y6,k128(k)@11)
+        y6 = join[y6l,y6r]  
+        y6l = FL(split`{2}(Round(y5,k128(k)@12))@0,kl128(k)@3)
+        y6r = FL_1(split`{2}(Round(y5,k128(k)@12))@1,kl128(k)@2)
+        y5 = Round(y4,k128(k)@13)
+        y4 = Round(y3,k128(k)@14)
+        y3 = Round(y2,k128(k)@15)
+        y2 = Round(y1,k128(k)@16)
+        y1 = Round(y0,k128(k)@17)
+        y0 = join[y0l,y0r]
+        y0l = split`{2}(x)@0 ^ kw128(k)@2
+        y0r = split`{2}(x)@1 ^ kw128(k)@3        
+        
+cam192e: (Q,Q1) -> Q
+cam192e (x,k) = y
+  where y = join[yr,yl]
+        yr = split`{2}(Round(y23,k192(k)@23))@1 ^ kw192(k)@2	 
+        yl = split`{2}(Round(y23,k192(k)@23))@0 ^ kw192(k)@3 
+        y23 = Round(y22,k192(k)@22)
+        y22 = Round(y21,k192(k)@21)
+        y21 = Round(y20,k192(k)@20)
+        y20 = Round(y19,k192(k)@19)
+        y19 = Round(y18,k192(k)@18)
+        y18 = join[y18l,y18r]
+        y18l = FL(split`{2}(Round(y17,k192(k)@17))@0,kl192(k)@4)
+        y18r = FL_1(split`{2}(Round(y17,k192(k)@17))@1,kl192(k)@5)        
+        y17 = Round(y16,k192(k)@16)
+        y16 = Round(y15,k192(k)@15)
+        y15 = Round(y14,k192(k)@14)
+        y14 = Round(y13,k192(k)@13)
+        y13 = Round(y12,k192(k)@12)
+        y12 = join[y12l,y12r]
+        y12l = FL(split`{2}(Round(y11,k192(k)@11))@0,kl192(k)@2)
+        y12r = FL_1(split`{2}(Round(y11,k192(k)@11))@1,kl192(k)@3)
+        y11 = Round(y10,k192(k)@10)
+        y10 = Round(y9,k192(k)@9)
+        y9 = Round(y8,k192(k)@8)
+        y8 = Round(y7,k192(k)@7)
+        y7 = Round(y6,k192(k)@6)
+        y6 = join[y6l,y6r]  
+        y6l = FL(split`{2}(Round(y5,k192(k)@5))@0,kl192(k)@0)
+        y6r = FL_1(split`{2}(Round(y5,k192(k)@5))@1,kl192(k)@1)
+        y5 = Round(y4,k192(k)@4)
+        y4 = Round(y3,k192(k)@3)
+        y3 = Round(y2,k192(k)@2)
+        y2 = Round(y1,k192(k)@1)
+        y1 = Round(y0,k192(k)@0)
+        y0 = join[y0l,y0r]
+        y0l = split`{2}(x)@0 ^ kw192(k)@0
+        y0r = split`{2}(x)@1 ^ kw192(k)@1        
+        
+cam192d: (Q,Q1) -> Q
+cam192d (x,k) = y
+  where y = join[yr,yl]
+        yr = split`{2}(Round(y23,k192(k)@0))@1 ^ kw192(k)@0	 
+        yl = split`{2}(Round(y23,k192(k)@0))@0 ^ kw192(k)@1 
+        y23 = Round(y22,k192(k)@1)
+        y22 = Round(y21,k192(k)@2)
+        y21 = Round(y20,k192(k)@3)
+        y20 = Round(y19,k192(k)@4)
+        y19 = Round(y18,k192(k)@5)
+        y18 = join[y18l,y18r]
+        y18l = FL(split`{2}(Round(y17,k192(k)@6))@0,kl192(k)@1)
+        y18r = FL_1(split`{2}(Round(y17,k192(k)@6))@1,kl192(k)@0)        
+        y17 = Round(y16,k192(k)@7)
+        y16 = Round(y15,k192(k)@8)
+        y15 = Round(y14,k192(k)@9)
+        y14 = Round(y13,k192(k)@10)
+        y13 = Round(y12,k192(k)@11)
+        y12 = join[y12l,y12r]
+        y12l = FL(split`{2}(Round(y11,k192(k)@12))@0,kl192(k)@3)
+        y12r = FL_1(split`{2}(Round(y11,k192(k)@12))@1,kl192(k)@2)
+        y11 = Round(y10,k192(k)@13)
+        y10 = Round(y9,k192(k)@14)
+        y9 = Round(y8,k192(k)@15)
+        y8 = Round(y7,k192(k)@16)
+        y7 = Round(y6,k192(k)@17)
+        y6 = join[y6l,y6r]  
+        y6l = FL(split`{2}(Round(y5,k192(k)@18))@0,kl192(k)@5)
+        y6r = FL_1(split`{2}(Round(y5,k192(k)@18))@1,kl192(k)@4)
+        y5 = Round(y4,k192(k)@19)
+        y4 = Round(y3,k192(k)@20)
+        y3 = Round(y2,k192(k)@21)
+        y2 = Round(y1,k192(k)@22)
+        y1 = Round(y0,k192(k)@23)
+        y0 = join[y0l,y0r]
+        y0l = split`{2}(x)@0 ^ kw192(k)@2
+        y0r = split`{2}(x)@1 ^ kw192(k)@3    
+        
+cam256e: (Q,Q2) -> Q
+cam256e (x,k) = y
+  where y = join[yr,yl]
+        yr = split`{2}(Round(y23,k256(k)@23))@1 ^ kw256(k)@2	 
+        yl = split`{2}(Round(y23,k256(k)@23))@0 ^ kw256(k)@3 
+        y23 = Round(y22,k256(k)@22)
+        y22 = Round(y21,k256(k)@21)
+        y21 = Round(y20,k256(k)@20)
+        y20 = Round(y19,k256(k)@19)
+        y19 = Round(y18,k256(k)@18)
+        y18 = join[y18l,y18r]
+        y18l = FL(split`{2}(Round(y17,k256(k)@17))@0,kl256(k)@4)
+        y18r = FL_1(split`{2}(Round(y17,k256(k)@17))@1,kl256(k)@5)        
+        y17 = Round(y16,k256(k)@16)
+        y16 = Round(y15,k256(k)@15)
+        y15 = Round(y14,k256(k)@14)
+        y14 = Round(y13,k256(k)@13)
+        y13 = Round(y12,k256(k)@12)
+        y12 = join[y12l,y12r]
+        y12l = FL(split`{2}(Round(y11,k256(k)@11))@0,kl256(k)@2)
+        y12r = FL_1(split`{2}(Round(y11,k256(k)@11))@1,kl256(k)@3)
+        y11 = Round(y10,k256(k)@10)
+        y10 = Round(y9,k256(k)@9)
+        y9 = Round(y8,k256(k)@8)
+        y8 = Round(y7,k256(k)@7)
+        y7 = Round(y6,k256(k)@6)
+        y6 = join[y6l,y6r]  
+        y6l = FL(split`{2}(Round(y5,k256(k)@5))@0,kl256(k)@0)
+        y6r = FL_1(split`{2}(Round(y5,k256(k)@5))@1,kl256(k)@1)
+        y5 = Round(y4,k256(k)@4)
+        y4 = Round(y3,k256(k)@3)
+        y3 = Round(y2,k256(k)@2)
+        y2 = Round(y1,k256(k)@1)
+        y1 = Round(y0,k256(k)@0)
+        y0 = join[y0l,y0r]
+        y0l = split`{2}(x)@0 ^ kw256(k)@0
+        y0r = split`{2}(x)@1 ^ kw256(k)@1        
+        
+cam256d: (Q,Q2) -> Q
+cam256d (x,k) = y
+  where y = join[yr,yl]
+        yr = split`{2}(Round(y23,k256(k)@0))@1 ^ kw256(k)@0	 
+        yl = split`{2}(Round(y23,k256(k)@0))@0 ^ kw256(k)@1 
+        y23 = Round(y22,k256(k)@1)
+        y22 = Round(y21,k256(k)@2)
+        y21 = Round(y20,k256(k)@3)
+        y20 = Round(y19,k256(k)@4)
+        y19 = Round(y18,k256(k)@5)
+        y18 = join[y18l,y18r]
+        y18l = FL(split`{2}(Round(y17,k256(k)@6))@0,kl256(k)@1)
+        y18r = FL_1(split`{2}(Round(y17,k256(k)@6))@1,kl256(k)@0)        
+        y17 = Round(y16,k256(k)@7)
+        y16 = Round(y15,k256(k)@8)
+        y15 = Round(y14,k256(k)@9)
+        y14 = Round(y13,k256(k)@10)
+        y13 = Round(y12,k256(k)@11)
+        y12 = join[y12l,y12r]
+        y12l = FL(split`{2}(Round(y11,k256(k)@12))@0,kl256(k)@3)
+        y12r = FL_1(split`{2}(Round(y11,k256(k)@12))@1,kl256(k)@2)
+        y11 = Round(y10,k256(k)@13)
+        y10 = Round(y9,k256(k)@14)
+        y9 = Round(y8,k256(k)@15)
+        y8 = Round(y7,k256(k)@16)
+        y7 = Round(y6,k256(k)@17)
+        y6 = join[y6l,y6r]  
+        y6l = FL(split`{2}(Round(y5,k256(k)@18))@0,kl256(k)@5)
+        y6r = FL_1(split`{2}(Round(y5,k256(k)@18))@1,kl256(k)@4)
+        y5 = Round(y4,k256(k)@19)
+        y4 = Round(y3,k256(k)@20)
+        y3 = Round(y2,k256(k)@21)
+        y2 = Round(y1,k256(k)@22)
+        y1 = Round(y0,k256(k)@23)
+        y0 = join[y0l,y0r]
+        y0l = split`{2}(x)@0 ^ kw256(k)@2
+        y0r = split`{2}(x)@1 ^ kw256(k)@3             
         
         
+        
+          
