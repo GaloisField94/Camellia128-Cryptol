@@ -46,7 +46,16 @@ s4f: B -> B
 s4f x = s1 @ (x <<< 1)
 
 Sf: L -> L
-Sf x = join[s1f(split`{8}(x)@0), s2f(split`{8}(x)@1), s3f(split`{8}(x)@2), s4f(split`{8}(x)@3), s2f(split`{8}(x)@4), s3f(split`{8}(x)@5), s4f(split`{8}(x)@6), s1f(split`{8}(x)@7)]
+Sf x = join[a,b,c,d,e,f,g,h]
+  where a = s1f(z@0)
+        b = s2f(z@1)
+        c = s3f(z@2)
+        d = s4f(z@3)
+        e = s2f(z@4)
+        f = s3f(z@5)
+        g = s4f(z@6)
+        h = s1f(z@7)
+        z = split`{8}(x)
 
 Pf: L -> L
 Pf x = join[a,b,c,d,e,f,g,h]
@@ -173,8 +182,8 @@ kw192 K = kw
   where kw = [a,b,c,d]
         a = kl@@[0..63]
         b = kl@@[64..127]
-        c = (kb<<111)@@[0..63]
-        d = (kb<<111)@@[64..127]
+        c = (kb<<<111)@@[0..63]
+        d = (kb<<<111)@@[64..127]
         kb = KB(kl,kr)
         kl = KL192(K)
         kr = KR192(K)
@@ -229,8 +238,8 @@ kw256 K = kw
   where kw = [a,b,c,d]
         a = kl@@[0..63]
         b = kl@@[64..127]
-        c = (kb<<111)@@[0..63]
-        d = (kb<<111)@@[64..127]
+        c = (kb<<<111)@@[0..63]
+        d = (kb<<<111)@@[64..127]
         kb = KB(kl,kr)
         kl = KL256(K)
         kr = KR256(K)
